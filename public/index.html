@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000">
+<link rel="manifest" href="/manifest.json">
+<title>FRED V4 — Personal AI</title>
+
+<style>
+:root{
+  --bg:#fff;
+  --fg:#090909;
+  --muted:#777;
+  --line:#ddd;
+  --soft:#f4f4f4;
+  --black:#000
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#fff;
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif
+}
+
+.app{
+  max-width:860px;
+  margin:auto;
+  height:100dvh;
+  display:flex;
+  flex-direction:column
+}
+
+header{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:#fff;
+  position:sticky;
+  top:0;
+  z-index:2
+}
+
+.orb{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  background:#000;
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font-weight:900
+}
+
+.brand h1{
+  margin:0;
+  font-size:20px;
+  letter-spacing:5px
+}
+
+.status{
+  font-size:11px;
+  color:var(--muted)
+}
+
+.actions{
+  margin-left:auto;
+  display:flex;
+  gap:7px
+}
+
+.icon{
+  width:40px;
+  height:40px;
+  border:1px solid #ccc;
+  background:#fff;
+  border-radius:12px;
+  font-size:17px
+}
+
+.chat{
+  flex:1;
+  overflow:auto;
+  padding:18px 14px 120px
+}
+
+.msg{
+  max-width:88%;
+  padding:13px 15px;
+  border-radius:18px;
+  margin:10px 0;
+  line-height:1.5;
+  white-space:pre-wrap;
+  word-break:break-word
+}
+
+.fred{
+  background:var(--soft);
+  border:1px solid var(--line);
+  margin-right:auto
+}
+
+.user{
+  background:#000;
+  color:#fff;
+  margin-left:auto
+}
+
+.composer{
+  position:fixed;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(860px,100%);
+  padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  display:flex;
+  gap:7px
+}
+
+.composer input{
+  min-width:0;
+  flex:1;
+  padding:14px;
+  border:1px solid #aaa;
+  border-radius:15px;
+  font-size:16px
+}
+
+.btn{
+  border:1px solid #000;
+  background:#000;
+  color:#fff;
+  border-radius:14px;
+  font-weight:700;
+  padding:0 14px
+}
+
+.light{
+  background:#fff;
+  color:#000
+}
+
+.square{
+  width:48px;
+  padding:0
+}
+
+.typing{
+  opacity:.6
+}
+
+.panel{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  display:none;
+  align-items:flex-end;
+  z-index:5
+}
+
+.sheet{
+  background:#fff;
+  width:100%;
+  max-width:860px;
+  margin:auto;
+  padding:20px;
+  border-radius:22px 22px 0 0
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px
+}
+
+.card{
+  border:1px solid #ddd;
+  border-radius:14px;
+  padding:13px
+}
+
+.card b{
+  display:block;
+  margin-bottom:4px
+}
+
+.small{
+  font-size:12px;
+  color:#777
+}
+
+.row{
+  display:flex;
+  gap:8px;
+  margin-top:12px
+}
+
+.row button{
+  padding:11px 14px;
+  border-radius:12px;
+  border:1px solid #000;
+  background:#000;
+  color:#fff
+}
+
+.row .light{
+  background:#fff;
+  color:#000
+}
+
+@media(max-width:520px){
+  .actions{gap:4px}
+  .icon{width:36px;height:36px}
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+  <div class="orb">F</div>
+
+  <div class="brand">
+    <h1>FRED</h1>
+    <div class="status" id="status">V4 • CHECKING BACKEND…</div>
+  </div>
+
+  <div class="actions">
+    <button class="icon" id="tools" title="FRED controls">⚙</button>
+    <button class="icon" id="memoryBtn" title="Memory">🧠</button>
+    <button class="icon" id="clear" title="Clear chat">↺</button>
+  </div>
+</header>
+
+<main id="chat" class="chat"></main>
+
+<form class="composer" id="form">
+
+  <button type="button" class="btn light square" id="attach">＋</button>
+
+  <input
+    id="input"
+    placeholder="Talk to FRED…"
+    autocomplete="off"
+  >
+
+  <button type="button" class="btn light square" id="mic">🎙</button>
+
+  <button class="btn" type="submit">Send</button>
+
+  <input
+    id="files"
+    type="file"
+    accept="image/*"
+    multiple
+    hidden
+  >
+
+</form>
+
+</div>
+
+
+<!-- CONTROL CENTER -->
+
+<div class="panel" id="panel">
+
+  <div class="sheet">
+
+    <h2>FRED V4 Control Center</h2>
+
+    <div class="grid">
+
+      <div class="card">
+        <b>Backend</b>
+        <span class="small" id="backend">Checking…</span>
+      </div>
+
+      <div class="card">
+        <b>Battery</b>
+        <span class="small" id="battery">Checking…</span>
+      </div>
+
+      <div class="card">
+        <b>Voice</b>
+        <span class="small" id="voice">Checking…</span>
+      </div>
+
+      <div class="card">
+        <b>Native actions</b>
+        <span class="small">Ready for Android bridge</span>
+      </div>
+
+      <div class="card">
+        <b>Agent tasks</b>
+        <span class="small">Multi-step task framework ready</span>
+      </div>
+
+      <div class="card">
+        <b>Web research</b>
+        <span class="small">Provider/tool connection point ready</span>
+      </div>
+
+    </div>
+
+    <div class="row">
+      <button class="light" id="close">Close</button>
+      <button id="check">Check backend</button>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- MEMORY -->
+
+<div class="panel" id="memoryPanel">
+
+  <div class="sheet">
+
+    <h2>FRED Memory</h2>
+
+    <p class="small">
+      Add useful information FRED should remember on this device.
+    </p>
+
+    <input
+      id="memoryInput"
+      placeholder="e.g. I prefer concise answers"
+      style="width:100%;padding:13px;border:1px solid #aaa;border-radius:12px"
+    >
+
+    <div
+      id="memoryList"
+      class="card"
+      style="margin-top:10px"
+    ></div>
+
+    <div class="row">
+      <button class="light" id="memoryClose">Close</button>
+      <button id="memoryAdd">Remember</button>
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+const chat = $("chat");
+const input = $("input");
+
+let messages =
+  JSON.parse(localStorage.getItem("fred_messages_v4") || "[]");
+
+let memories =
+  JSON.parse(localStorage.getItem("fred_memory_v4") || "[]");
+
+
+function save(){
+
+  localStorage.setItem(
+    "fred_messages_v4",
+    JSON.stringify(messages.slice(-100))
+  );
+
+  localStorage.setItem(
+    "fred_memory_v4",
+    JSON.stringify(memories.slice(-100))
+  );
+
+}
+
+
+function renderMemory(){
+
+  const box = $("memoryList");
+
+  if(!box) return;
+
+  box.innerHTML =
+    memories.length
+      ? memories.map((m,i)=>
+          `<div style="padding:7px 0;border-bottom:1px solid #eee">
+            ${i+1}. ${escapeHTML(m)}
+          </div>`
+        ).join("")
+      : "No saved memories yet.";
+
+}
+
+
+function escapeHTML(value){
+
+  return String(value).replace(
+    /[&<>]/g,
+    c => ({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;"
+    }[c])
+  );
+
+}
+
+
+function render(){
+
+  chat.innerHTML = "";
+
+  if(!messages.length){
+
+    messages = [{
+      role:"assistant",
+      content:
+        "Hello, Master Crownstarlin. Welcome to FRED V4. My advanced assistant systems are ready."
+    }];
+
+  }
+
+  for(const m of messages){
+
+    const d = document.createElement("div");
+
+    d.className =
+      "msg " +
+      (m.role === "user" ? "user" : "fred");
+
+    d.textContent = m.content;
+
+    chat.appendChild(d);
+
+  }
+
+  chat.scrollTop = chat.scrollHeight;
+
+  save();
+
+}
+
+
+function add(role,content){
+
+  messages.push({
+    role,
+    content
+  });
+
+  render();
+
+}
+
+
+function speak(text){
+
+  if("speechSynthesis" in window){
+
+    speechSynthesis.cancel();
+
+    const u =
+      new SpeechSynthesisUtterance(text);
+
+    u.rate = .97;
+
+    speechSynthesis.speak(u);
+
+  }
+
+}
+
+
+async function health(){
+
+  try{
+
+    const r =
+      await fetch("/api/health", {
+        cache:"no-store"
+      });
+
+    if(!r.ok) throw new Error("Health check failed");
+
+    const d = await r.json();
+
+    $("status").textContent =
+      d.aiConfigured
+        ? "V4 • ONLINE • AI READY"
+        : "V4 • ONLINE • AI SETUP NEEDED";
+
+    $("backend").textContent =
+      d.aiConfigured
+        ? "Online + AI configured"
+        : "Online, AI provider not configured";
+
+    return true;
+
+  }catch(error){
+
+    $("status").textContent =
+      "V4 • OFFLINE";
+
+    $("backend").textContent =
+      "Cannot reach /api/health.";
+
+    return false;
+
+  }
+
+}
+
+
+async function send(q){
+
+  if(!q.trim()) return;
+
+  add("user",q);
+
+  const low = q.toLowerCase();
+
+  if(low.startsWith("remember ")){
+
+    const v = q.slice(9).trim();
+
+    if(v){
+
+      memories.push(v);
+
+      save();
+
+      add(
+        "assistant",
+        "I'll remember that, Master Crownstarlin."
+      );
+
+      speak("I'll remember that.");
+
+      return;
+    }
+
+  }
+
+
+  if(
+    low === "forget that" ||
+    low === "forget everything"
+  ){
+
+    memories = [];
+
+    save();
+
+    add(
+      "assistant",
+      "Your FRED device memory has been cleared."
+    );
+
+    return;
+
+  }
+
+
+  const t =
+    document.createElement("div");
+
+  t.className =
+    "msg fred typing";
+
+  t.textContent =
+    "FRED is thinking…";
+
+  chat.appendChild(t);
+
+
+  try{
+
+    const r =
+      await fetch("/api/chat",{
+
+        method:"POST",
+
+        headers:{
+          "Content-Type":
+            "application/json"
+        },
+
+        body:JSON.stringify({
+
+          message:q,
+
+          history:
+            messages.slice(-20),
+
+          memory:memories
+
+        })
+
+      });
+
+
+    const d =
+      await r.json();
+
+    t.remove();
+
+    const reply =
+      d.reply ||
+      d.error ||
+      "I could not complete that request.";
+
+    add(
+      "assistant",
+      reply
+    );
+
+    speak(reply);
+
+    await health();
+
+
+  }catch(error){
+
+    t.remove();
+
+    add(
+      "assistant",
+      "The FRED backend is not reachable. Please check the FRED server."
+    );
+
+    $("status").textContent =
+      "V4 • OFFLINE";
+
+  }
+
+}
+
+
+/* CHAT */
+
+$("form").onsubmit = e => {
+
+  e.preventDefault();
+
+  const q =
+    input.value.trim();
+
+  input.value = "";
+
+  send(q);
+
+};
+
+
+/* CLEAR */
+
+$("clear").onclick = () => {
+
+  messages = [];
+
+  render();
+
+};
+
+
+/* MEMORY */
+
+$("memoryBtn").onclick = () => {
+
+  renderMemory();
+
+  $("memoryPanel").style.display =
+    "flex";
+
+};
+
+
+$("memoryClose").onclick = () => {
+
+  $("memoryPanel").style.display =
+    "none";
+
+};
+
+
+$("memoryAdd").onclick = () => {
+
+  const v =
+    $("memoryInput").value.trim();
+
+  if(v){
+
+    memories.push(v);
+
+    $("memoryInput").value = "";
+
+    save();
+
+    renderMemory();
+
+  }
+
+};
+
+
+/* CONTROL CENTER */
+
+$("tools").onclick = async () => {
+
+  $("panel").style.display = "flex";
+
+  await health();
+
+
+  if(navigator.getBattery){
+
+    const b =
+      await navigator.getBattery();
+
+    $("battery").textContent =
+      Math.round(b.level * 100) +
+      "%" +
+      (b.charging
+        ? " • charging"
+        : "");
+
+  }else{
+
+    $("battery").textContent =
+      "Not available";
+
+  }
+
+
+  $("voice").textContent =
+    "SpeechSynthesisUtterance" in window
+      ? "Text-to-speech available"
+      : "TTS unavailable";
+
+};
+
+
+$("close").onclick = () => {
+
+  $("panel").style.display =
+    "none";
+
+};
+
+
+$("check").onclick = health;
+
+
+/* IMAGE UPLOAD */
+
+$("attach").onclick = () => {
+
+  $("files").click();
+
+};
+
+
+$("files").onchange = async () => {
+
+  const fs =
+    [...$("files").files];
+
+  if(!fs.length) return;
+
+  const fd =
+    new FormData();
+
+  fs.forEach(
+    f => fd.append("images",f)
+  );
+
+  add(
+    "user",
+    `📷 Attached ${fs.length} image${fs.length > 1 ? "s" : ""}.`
+  );
+
+
+  try{
+
+    const r =
+      await fetch(
+        "/api/upload",
+        {
+          method:"POST",
+          body:fd
+        }
+      );
+
+    const d =
+      await r.json();
+
+    add(
+      "assistant",
+      `I received ${d.files?.length || fs.length} image${fs.length > 1 ? "s" : ""}.`
+    );
+
+  }catch(error){
+
+    add(
+      "assistant",
+      "The image upload could not reach the backend."
+    );
+
+  }
+
+};
+
+
+/* VOICE */
+
+const SR =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+
+if(SR){
+
+  const rec =
+    new SR();
+
+  rec.lang = "en-US";
+
+  rec.onresult = e => {
+
+    input.value =
+      e.results[0][0].transcript;
+
+    $("form").requestSubmit();
+
+  };
+
+  $("mic").onclick = () => {
+
+    try{
+      rec.start();
+    }catch(error){}
+
+  };
+
+}else{
+
+  $("mic").disabled = true;
+
+}
+
+
+/* SERVICE WORKER */
+
+if("serviceWorker" in navigator){
+
+  navigator.serviceWorker
+    .register("/sw.js")
+    .catch(()=>{});
+
+}
+
+
+/* START */
+
+render();
+
+health();
+
+</script>
+
+</body>
+</html>
+
+Important
+
+This fixes the frontend file, but it does not fix the Render error by itself.
+
+Your current error is:
+
+/opt/render/project/public/index.html
+
+So after putting this file at:
+
+public/index.html
+
+we still need to make sure "index.js" points to the correct location.
+
+Do not change your Render Root Directory. The next file I need to check is "index.js".
