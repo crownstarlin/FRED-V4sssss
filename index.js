@@ -4,10 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PUBLIC = path.join(__dirname, '..', 'public');
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '0.0.0.0';
-
+const PUBLIC = path.join(__dirname, 'public');
 function loadEnv(){
   const p=path.join(__dirname,'..','.env');
   if(!fs.existsSync(p)) return;
